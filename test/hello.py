@@ -1,3 +1,10 @@
 import pandas as pd 
-df = pd.Series([1,2,3,[4,5],{"name":"hello"}])
+df =pd.DataFrame([{
+    "name":"abilash",
+    # "age":23
+},
+{
+    "name":"abilash",
+    "age":23
+},])
 print(df)
