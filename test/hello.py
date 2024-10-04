@@ -1,10 +1,39 @@
 import pandas as pd 
-df =pd.DataFrame([{
-    "name":"abilash",
-    # "age":23
-},
-{
-    "name":"abilash",
-    "age":23
-},])
+
+df = pd.DataFrame([
+    {
+        "name":"abilash",
+        "age":21
+    },{
+        "name":"atom",
+        "age":23
+    },
+    {
+        "name":"harish",
+        "age":30
+    },{
+        "name":"abilash",
+        "age":21
+    },{
+        "name":"atom",
+        "age":23
+    },
+    {
+        "name":"harish",
+        "age":30
+    },{
+        "name":"abilash",
+        "age":21
+    },{
+        "name":"atom",
+        "age":23
+    },
+    {
+        "name":"harish",
+        "age":30
+    },{
+        "name":"abilash",
+        "age":21
+    }
+],columns=["name","age"])
 print(df)
