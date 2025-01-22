@@ -1,186 +1,197 @@
-import duckdb
 import numpy as np
-from datetime import datetime
-from typing import Tuple
-import pretty_tables as pt
-import os
-import multiprocessing as mp
-from threading import Thread
+import duckdb as duck
+from  .flash_error import *
+from .frame import *
+from copy import deepcopy
 
-class Dataframe:
-    def __init__(self,data: list[any]=None,name=None,cache=False,col=None,recache=False) -> None:
+
+
+class Dataframe: 
+    """
+    if data object type is 
+    1 -> List [Single column]
+    2 -> Dict [Multiple column]
+    eg:
+    >>> df = Dataframe(data=[1,3.3,9.3,"hello world",{"name":"abi"},[4,5,6]])
+    # here each element represent as row
+    >>> df = Dataframe(data={
+        "name": ["flash"],
+        "version": ["0.0.1"],
+        "in_dict_format": [{"name":"abi"}]
+    })
+    # here value should be in list type represent each row for a column
+    """ 
+    def __init__(self,data=None,index=None) -> None:
         if data==None:
-            raise Exception("Error:","Need Dataframe")
-        if not isinstance(data,list):
-            raise Exception("Error","Dataframe should be in list type")
-        if cache==True and name==None:
-            raise Exception("Error:","Need [name] argument to cache")
-        if cache and recache:
-            raise Exception("Error:","No Need to pass [cache] argument")
-        if len(data)==0:
-            raise Exception("Error:","Empty Dataset")
-        if not isinstance(col,list):
-            raise Exception("Error:","Columns should be in list type")
-        self.__conn = self.__create_memory_frame(data,name,cache,col,recache)
-    
-    def __transform(self,data: np.array) -> np.array:
-        for record in data:
-                    missing_key = set(self.columns[1:])-set(record.keys())
-                    if len(self.columns[1:]) != len(record.keys()):
-                        error_message = f"Number of columns provided [{len(self.columns[1:])}] does not match with the data [{len(record.keys())}] for {record}"
-                        raise Exception("Error:",error_message)
-                    if len(missing_key)!=0:
-                        record[missing_key]=None
-        return data
-    def __create_memory_frame(self,data: list[any],name:str,cache: bool,col: list[str],recache:bool) -> duckdb.connect:
-        data= np.array(data)
-        if cache:
-            path = os.getenv("temp","") + "\\"
-            conn = duckdb.connect(path+name)
-            result = conn.execute(f"select exists(select 1 from information_schema.tables where table_name='{name}')")
-            if result.fetchone()[0]:
-                self.__name=name
-                if col==None:
-                    self.columns = data[0].keys()
-                    self.columns.insert(0,"index")        
+            raise EmptyInitilization()
+        if index !=None:
+            passing_index_in_series()
+        if isinstance(data,list):
+            self.frame_kind = FrameKind.SINGLECOL
+            self.frame_data=np.array(data)
+            self.index=np.arange(len(self.frame_data))
+        elif isinstance(data,dict):
+            self.frame_kind=FrameKind.MULTICOL
+            if index!=None:
+                if isinstance(index,list):
+                    for col in index:
+                        if not isinstance(col,str):
+                            raise InvalidIndexDataValues(col)
                 else:
-                    self.columns = col
-                    self.columns.insert(0,"index")
-                return conn
-            else:
-                if recache:
-                    conn.execute("drop table ",self.__name)
-            if col==None:
-                self.columns = data[0].keys()
-                self.columns.insert(0,"index")        
-                col = [f"{i} varchar default null" for i in data[0].keys()]
-            else:
-                self.columns = col
-                self.columns.insert(0,"index")
-                col = [f"{str(i)} varchar default null" for i in col]
-            try:
-                conn.execute("create sequence index_id start 1")
-                conn.execute(f"create table {self.__name} (id bigint primary key default nextval('index_id') not null,{','.join(col[1:])})")
-                self.__name= name
-                for record in data:
-                        conn.execute(f"insert into {self.__name}({','.join(record.keys())}) values ({('?,'*len(record.keys()))[:-1]})",*record.values())
-                conn.commit()
-            except duckdb.CatalogException  as e:
-                raise Exception("Exception:",e)
-            except duckdb.BinderException as e:
-                raise Exception("EXCEPTION:",e)
-            except duckdb.InvalidInputException as e:
-                raise Exception("EXCEPTION",e)
-            return conn
-        else: #not cache
-            conn = duckdb.connect()
-            try:
-                if col==None:
-                    self.columns = data[0].keys()
-                    self.columns.insert(0,"index") 
-                    col = [f"{i} varchar default null" for i in data[0].keys()]
-                else:
-                    self.columns = col
-                    col = [f"{str(i)} varchar default null" for i in col]
-                    self.columns.insert(0,"index")
-                    
-                self.__name = "tbl_"+datetime.now().strftime("%Y%m%d%H%M%S")
-                conn.execute("create sequence index_id start 1")
-                conn.execute(f"create table {self.__name} (id bigint primary key default nextval('index_id') not null,{','.join(col)})")
-                # data = self.__transform(data)
-                data_size= len(data)
-                chunk_size = int(len(data)/mp.cpu_count())
-
-                def insert_record(db_name: str,data: list[dict],columns: list[str],new_conn: duckdb.connect) -> None:            
-                    new_conn.executemany(f"insert into {db_name} ({','.join(columns)}) values ({('?,'*len(columns))[:-1]})",data)
-                    new_conn.commit()
-                start=0
-                end=chunk_size
-                my_worker=[]
-                while start<=data_size:
-                    result = [record.values() for record in data[start:end]]
-                    if len(result)==0:
-                        break
-                    work = Thread(target=insert_record,args=(self.__name,result,self.columns[1:],conn))
-                    my_worker.append(work)
-                    work.start()
-                    start=end
-                    end+=chunk_size
-                for work in my_worker:
-                    work.join()
-                    # conn.execute(f"insert into {self.__name}({','.join(record.keys())}) values ({('?,'*len(record.keys()))[:-1]})",[*record.values()])
-                conn.commit()
-            except duckdb.BinderException as e:
-                raise Exception("EXCEPTION:",e)
-            except duckdb.InvalidInputException as e:
-                raise Exception("EXCEPTION",e)
-            return conn
-    def delcache(self):
-        self.__conn.execute("drop table ",self.__name)
-        self.__conn.commit()
-    
-    def display(self) -> None:
-        result = [list(i)for i in self.__conn.sql(f"select * from {self.__name} limit 10").fetchall()] 
-        if len(result)==0:
-            print("*"*5,"Flash Frame","*"*5)
-            print("<EMPTY>")
-            return
-        table =pt.create(
-            headers=self.columns,
-            rows=result,
-        )
-        print("*"*5,"Flash Frame","*"*5)
-        print(table)
-    def __exit__(self) -> None:
-        self.__conn.close()
-        
-
-
-class Series:
-    def __init__(self,data: list[any]=None,col: list[str]=None) -> None:
-        if data==None:
-            raise Exception("Error:","Need series data")
-        if not isinstance(data,list):
-            raise Exception("Error:","Series should be in list type")
-        
-        self.frame,self.column = self.__transform(data,col)
-        self.__name = "tbl_"+datetime.now().strftime("%Y%m%d%H%M%S")
-        self.__conn = self.__create_memory_frame()
-        
-        
-        result = self.__conn.sql(f"select * from {self.__name}")        
-        print(result.fetchall())
-    
-    def __create_memory_frame(self) -> duckdb.connect:
-        conn = duckdb.connect()
-        try:
-            conn.execute(f"create table {self.__name} (series_key varchar primary key not null,series_value varchar)")
-            query_value  = [(key,value) for (key,value) in self.frame.items()]
-            conn.executemany(f"insert into {self.__name} values(?,?)",query_value)
-            conn.commit()
-        except Exception as e:
-            print("Exception:","Failed to store frames coz => ",e)
-        return conn
-    def __transform(self,data: list[any],col:list[str]) -> Tuple[dict,list[str]]:
-        transform_data = {}
-        if col==None:
-            for (index,value) in enumerate(np.array(data,dtype=object)):
-                transform_data[str(index)]=str(value)
-            col=transform_data.keys()
+                    raise InvalidDataframeData()
+            self.frame_index,self.frame_data,self.frame_size = parse_multiple_column_data(index,data)
         else:
-            if len(col) != len(set(col)):
-                raise Exception("Error:","Duplicate columns found")
-            else:
-                if not isinstance(col,list):
-                    raise Exception("Error:","Columns has to be in list type")
-                if len(data) != len(col):
-                    raise Exception("Error:","Number of column name provided does not match with the data")
-                index=0
-                for value in np.array(data,dtype=object):
-                    transform_data[col[index]]=str(value)
-                    index+=1
-        return (transform_data,col)
+            data_type = type(data)
+            raise InvalidDataframeData(data_type)
+    def memspace(self) -> int:
+        return self.frame_data.__sizeof__()
+    def dim(self) -> int:
+        return 1 if self.frame_kind==FrameKind.SINGLECOL else len(self.frame_index)
+    def size(self) -> Tuple[int,int]:
+        if self.frame_kind == FrameKind.SINGLECOL:
+            return {"row":1,"col":len(self.frame_data)}
+        else:
+            return{
+                "row": len(self.frame_index),
+                "col": self.frame_size
+            }
+    def key(self) -> List[str|int]:
+        return self.frame_index
+    def values(self) -> List[Any]:
+        return list(self.frame_data.values())
+    def isEmpty(self,col) -> bool|InvalidFrameKey:
+        if self.frame_data.get(col,None) is None:
+            raise InvalidFrameKey(col)
+        return self.frame_data[col].size==0
 
-    def __exit__(self) -> None:
-        self.__conn.close()
+    def tail(self,row_length=5) -> List[Any]:
+        col = "\t".join(list(map(lambda x: f"[{x.strip()}]",self.frame_index)))
+        output=f"[Index]\t{col}\n"
+        index=0
+        result =[]
+        overall_value_result=[]
+        for i in list(self.frame_data.values()):
+            overall_value_result.append(i[::-1])
+        row =[]
+        while index < len(overall_value_result[0]):
+            if index == row_length:
+                break
+            for i in overall_value_result:
+                row.append(str(i[index]))
+            result.append(row)
+            row=[]
+            index+=1
+        del row,col
+        index=0
+        for row in result:
+            output+=str(index)+"\t"
+            for col in row:
+                output+=f"{str(col)}\t"
+            output+="\n"
+            index+=1
+        return output
+    def head(self,row_length=5) -> List[Any]:
+        col = "\t".join(list(map(lambda x: f"[{x.strip()}]",self.frame_index)))
+        output=f"[Index]\t{col}\n"
+        index=0
+        result =[]
+        overall_value_result=[]
+        for i in list(self.frame_data.values()):
+            overall_value_result.append(i)
+        row =[]
+        while index < len(overall_value_result[0]):
+            if index == row_length:
+                break
+            for i in overall_value_result:
+                row.append(str(i[index]))
+            result.append(row)
+            row=[]
+            index+=1
+        del row,col
+        index=0
+        for row in result:
+            output+=str(index)+"\t"
+            for col in row:
+                output+=f"{str(col)}\t"
+            output+="\n"
+            index+=1
+        return output
+    def remove(self,key,copy=False) -> Dict[str|int,List[Any]]|None:
+        if self.frame_data.get(key,None) is None:
+            raise InvalidFrameKey(key)
+        if copy:
+            copy_data = deepcopy(self.frame_data)
+            del copy_data[key]
+            new_df = Dataframe(data=copy_data)
+            return new_df
+        else:
+            self.frame_index.remove(key)
+            del self.frame_data[key]
+    def update(self,key=None,value=None,copy=False) -> None:
+        if self.frame_data.get(key,None) is None:
+            raise InvalidFrameKey(key)
+        if value ==None:
+            value= [None] * len(self.frame_data[next(iter(self.frame_data))])
+        if copy:
+            copy_data = deepcopy(self.frame_data)
+            copy_data[key] = value
+            new_df = Dataframe(data=copy_data)
+            return new_df
+        else:
+            self.frame_data[key]=value
 
+    def __iter__(self) -> Dict[str|int,List[Any]]:
+        return iter(self.frame_data.items())
+    def __getitem__(self,key) -> List[Any]:
+        if self.frame_data.get(key,None) is None:
+            print(invalid_frame_key_error(key))
+            return
+        return self.frame_data[key]
+    def __setitem__(self, key,value) -> Dict[str|int,List[Any]]:
+        if self.frame_data.get(key,None) is None:
+            self.frame_index.append(key)
+        if len(value) != len(self.frame_data[next(iter(self.frame_data))]):
+            raise InvalidRowSize(len(value))
+        self.frame_data[key]=value
+    def __str__(self) -> str:
+        output="\n"
+        if self.frame_kind==FrameKind.SINGLECOL:
+            output+="[Index]\t [Values]\n"
+            for index,elem in enumerate(self.frame_data[:10]):
+                output+=f"{index}\t {str(elem)}\n"
+            if len(self.frame_data)>10:
+                output+="----\t -------\n"
+                output+=f"{len(self.frame_data)-10} more records\n"
+                output+="----\t -------\n"
+        else:
+            col = "\t".join(list(map(lambda x: f"[{x.strip()}]",self.frame_index)))
+            output+=f"[Index]\t{col}\n"
+            index=0
+            result =[]
+            overall_value_result=[]
+            for i in list(self.frame_data.values()):
+                overall_value_result.append(i)
+            row =[]
+            while index < len(overall_value_result[0]):
+                if index>10:
+                    break
+                for i in overall_value_result:
+                    row.append(str(i[index]))
+                result.append(row)
+                row=[]
+                index+=1
+            del row,col
+            index=0
+            for row in result:
+                output+=str(index)+"\t"
+                for col in row:
+                    output+=f"{str(col)}\t"
+                output+="\n"
+                index+=1
+            if len(overall_value_result[0])>10:
+                output+="----\t -------\n"
+                output+=f"{len(overall_value_result[0])-11} more records\n"
+                output+="----\t -------\n"
+            
+        return output
+        

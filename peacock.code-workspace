@@ -1,0 +1,21 @@
+{
+	"folders": [
+		{
+			"path": "../../../peacock"
+		},
+		{
+			"path": "../ml"
+		},
+		{
+			"path": "../../c"
+		},
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"files.watcherExclude": {
+			"**/target": true
+		}
+	}
+}
