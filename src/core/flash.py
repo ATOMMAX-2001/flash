@@ -23,14 +23,18 @@ class Dataframe:
     # here value should be in list type represent each row for a column
     """ 
     def __init__(self,data=None,index=None) -> None:
-        if data==None:
+        if data is None:
             raise EmptyInitilization()
         if index !=None:
             passing_index_in_series()
         if isinstance(data,list):
             self.frame_kind = FrameKind.SINGLECOL
             self.frame_data=np.array(data)
-            self.index=np.arange(len(self.frame_data))
+            self.frame_index=np.arange(len(self.frame_data))
+        elif isinstance(data,np.ndarray):
+            self.frame_kind = FrameKind.SINGLECOL
+            self.frame_data=data
+            self.frame_index=np.arange(len(self.frame_data))
         elif isinstance(data,dict):
             self.frame_kind=FrameKind.MULTICOL
             if index!=None:
@@ -56,30 +60,49 @@ class Dataframe:
                 "row": len(self.frame_index),
                 "col": self.frame_size
             }
-    def key(self) -> List[str|int]:
+    def keys(self) -> List[str|int]:
         return self.frame_index
 
     def values(self) -> List[Any]:
+        if self.frame_kind==FrameKind.SINGLECOL:
+            return list(self.frame_data)
         return list(self.frame_data.values())
 
-    def isEmpty(self,col) -> bool|InvalidFrameKey:
+    def isEmpty(self,col=None) -> bool|InvalidFrameKey:
+        if self.frame_kind == FrameKind.SINGLECOL:
+            return len(self.frame_data)==0
         if self.frame_data.get(col,None) is None:
             raise InvalidFrameKey(col)
         return self.frame_data[col].size==0
     
 
     def dropna(self,copy=False) -> DataFrame|None:
-        result = np.transpose(list(self.frame_data.values()))
-        mask = np.array([np.any(row == None) for row in result])
-        new_result= np.transpose(result[~mask])
-        if copy:
-            new_copy= deepcopy(self.frame_data)
-            for index,key in enumerate(new_copy.keys()):
-                new_copy[key] = new_result[index]
-            new_obj = Dataframe(data=new_copy)
-            del new_result,mask
-            return new_obj
+        result,mask,new_result=None,None,[]
+        if self.frame_kind == FrameKind.SINGLECOL:
+            if np.any(self.frame_data==None):
+                new_result=[]
+            else:
+                new_result=self.frame_data
         else:
+            result = np.transpose(list(self.frame_data.values()))
+            mask = np.array([np.any(row == None) for row in result])
+            new_result= np.transpose(result[~mask])
+        if copy:
+            if self.frame_kind==FrameKind.SINGLECOL:
+                new_obj = Dataframe(data=new_result)
+                del new_result,mask
+                return new_obj
+            else:
+                new_copy= deepcopy(self.frame_data)
+                for index,key in enumerate(new_copy.keys()):
+                    new_copy[key] = new_result[index]
+                new_obj = Dataframe(data=new_copy)
+                del new_result,mask
+                return new_obj
+        else:
+            if self.frame_kind==FrameKind.SINGLECOL:
+                self.frame_data=new_result
+                return None
             for index,key in enumerate(self.frame_data.keys()):
                 self.frame_data[key]=new_result[index]
             del new_result,mask
@@ -90,9 +113,17 @@ class Dataframe:
         if not isinstance(row_length,int):
             print(invalid_record_size(row_length))
             return
-        col = "\t".join(list(map(lambda x: f"[{x.strip()}]",self.frame_index)))
+        col = "\t".join(list(map(lambda x: f"[{str(x).strip()}]",self.frame_index)))
         output=f"[Index]\t{col}\n"
-        result = np.transpose(list(self.frame_data.values()))[-row_length:]
+        result=None
+        if self.frame_kind == FrameKind.SINGLECOL:
+            output=f"[Index]\t[Value]\n"
+            for col in range(1,row_length+1):
+                output +=str(self.frame_index[-col])+"\t"+str(self.frame_data[-col])+"\n"
+            del result
+            return output
+        else:
+            result = np.transpose(list(self.frame_data.values()))[-row_length:]
         index=0
         for row in result:
             output+=str(index)+"\t"
@@ -105,21 +136,46 @@ class Dataframe:
     
 
     def head(self,row_length=5) -> List[Any]:
-        col = "\t".join(list(map(lambda x: f"[{x.strip()}]",self.frame_index)))
+        if not isinstance(row_length,int):
+            print(invalid_record_size(row_length))
+            return
+        col = "\t".join(list(map(lambda x: f"[{str(x).strip()}]",self.frame_index)))
         output=f"[Index]\t{col}\n"
-        result = np.transpose(list(self.frame_data.values()))[:row_length]
-        index=0
-        for row in result:
-            output+=str(index)+"\t"
-            for i in range(len(self.frame_index)):
-                output+=row[i]+"\t"
-            output+="\n"
-            index+=1
-        del result
-        return output
+        result=None
+        if self.frame_kind == FrameKind.SINGLECOL:
+            output=f"[Index]\t[Value]\n"
+            for col in range(row_length):
+                output +=str(self.frame_index[col])+"\t"+str(self.frame_data[col])+"\n"
+            del result
+            return output
+        else:
+            result = np.transpose(list(self.frame_data.values()))[:row_length]
+            index=0
+            for row in result:
+                output+=str(index)+"\t"
+                for i in range(len(self.frame_index)):
+                    output+=row[i]+"\t"
+                output+="\n"
+                index+=1
+            del result
+            return output
     def records(self) -> np.ndarray:
+        if self.frame_kind == FrameKind.SINGLECOL:
+            return list(self.frame_data)
         return np.transpose(list(self.frame_data.values()))
     def remove(self,key,copy=False) -> DataFrame|None:
+        if self.frame_kind ==FrameKind.SINGLECOL:
+            if key not in self. frame_index:
+                raise InvalidFrameKey(key)
+            pos = list(self.frame_index).index(key)
+            if copy:
+                new_data = np.delete(self.frame_data,pos)
+                new_obj = Dataframe(data=new_data)
+                return new_obj
+            else:
+                self.frame_data = np.delete(self.frame_data,pos)
+                list(self.frame_index).remove(key)
+            return None
         if self.frame_data.get(key,None) is None:
             raise InvalidFrameKey(key)
         if copy:
@@ -135,12 +191,16 @@ class Dataframe:
             raise InvalidColData(col)
         if len(col) != len(self.frame_index):
             raise InvalidFrameCol(len(col),len(self.frame_index))
-        
+        self.frame_index = col
     def update(self,key=None,value=None,copy=False) -> None:
-        if self.frame_data.get(key,None) is None:
-            raise InvalidFrameKey(key)
-        if value ==None:
-            value= [None] * len(self.frame_data[next(iter(self.frame_data))])
+        if self.frame_kind==FrameKind.SINGLECOL:
+            if key not in self.frame_index:
+                raise InvalidFrameKey(key)
+        else:
+            if self.frame_data.get(key,None) is None:
+                raise InvalidFrameKey(key)
+            if value ==None:
+                value= [None] * len(self.frame_data[next(iter(self.frame_data))])
         if copy:
             copy_data = deepcopy(self.frame_data)
             copy_data[key] = value
@@ -152,25 +212,35 @@ class Dataframe:
     def __iter__(self) -> Dict[str|int,List[Any]]:
         return iter(self.frame_data.items())
     def __getitem__(self,key) -> List[Any]:
-        if self.frame_data.get(key,None) is None:
-            print(invalid_frame_key_error(key))
-            return
+        if self.frame_kind == FrameKind.SINGLECOL:
+            if key not in self.frame_index:
+                print(invalid_frame_key_error(key))
+                return    
+        else:
+            if self.frame_data.get(key,None) is None:
+                print(invalid_frame_key_error(key))
+                return
         return self.frame_data[key]
     def __setitem__(self, key,value) -> Dict[str|int,List[Any]]:
-        if self.frame_data.get(key,None) is None:
-            self.frame_index.append(key)
-        if value ==None:
-            value= [None] * len(self.frame_data[next(iter(self.frame_data))])
+        if self.frame_kind == FrameKind.SINGLECOL:
+            if key not in self.frame_index:
+                print(invalid_frame_key_error(key))
+                return    
         else:
-            if len(value) != len(self.frame_data[next(iter(self.frame_data))]):
-                raise InvalidRowSize(len(value))
+            if self.frame_data.get(key,None) is None:
+                self.frame_index.append(key)
+            if value ==None:
+                value= [None] * len(self.frame_data[next(iter(self.frame_data))])
+            else:
+                if len(value) != len(self.frame_data[next(iter(self.frame_data))]):
+                    raise InvalidRowSize(len(value))
         self.frame_data[key]=value
     def __str__(self) -> str:
         output="\n"
         if self.frame_kind==FrameKind.SINGLECOL:
             output+="[Index]\t [Values]\n"
             for index,elem in enumerate(self.frame_data[:10]):
-                output+=f"{index}\t {str(elem)}\n"
+                output+=f"{self.frame_index[index]}\t {str(elem)}\n"
             if len(self.frame_data)>10:
                 output+="----\t -------\n"
                 output+=f"{len(self.frame_data)-10} more records\n"

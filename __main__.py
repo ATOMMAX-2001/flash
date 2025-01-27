@@ -8,8 +8,8 @@ df = Dataframe(data={
     "score":[100,None,300]
 })
 
-new_df= df.dropna(copy=True)
-print(new_df.records())
+
+print(df.records())
 
 end_time=time.perf_counter()
 print("Elasped time:",end_time-start_time,"Seconds")
