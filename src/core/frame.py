@@ -10,7 +10,7 @@ class FrameKind(Enum):
 
 
 
-def parse_multiple_column_data(index: None|str,data: Dict[Any,Any]) -> Tuple[str|int,Dict[str,List[Any]]]:
+def parse_multiple_column_data(index: None|str,data: Dict[Any,Any]|np.ndarray) -> Tuple[str|int,Dict[str,List[Any]]]:
     if index ==None:
         index = list(data.keys())
     new_data={}
