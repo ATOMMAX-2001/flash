@@ -1,10 +1,8 @@
 import numpy as np
-import duckdb as duck
-from pandas import DataFrame
 from  .flash_error import *
 from .frame import *
 from copy import deepcopy
-
+from typing import Self
 
 
 class Dataframe: 
@@ -73,10 +71,8 @@ class Dataframe:
             return len(self.frame_data)==0
         if self.frame_data.get(col,None) is None:
             raise InvalidFrameKey(col)
-        return self.frame_data[col].size==0
-    
-
-    def dropna(self,copy=False) -> DataFrame|None:
+        return self.frame_data[col].size==0    
+    def dropna(self,copy=False) -> Any:
         result,mask,new_result=None,None,[]
         if self.frame_kind == FrameKind.SINGLECOL:
             if np.any(self.frame_data==None):
@@ -85,7 +81,7 @@ class Dataframe:
                 new_result=self.frame_data
         else:
             result = np.transpose(list(self.frame_data.values()))
-            mask = np.array([np.any(row == None) for row in result])
+            mask = np.array([np.any((row == None)| (row == "None")|(row == "null") | (str(np.nan) in str(row))) for row in result])
             new_result= np.transpose(result[~mask])
         if copy:
             if self.frame_kind==FrameKind.SINGLECOL:
@@ -154,7 +150,7 @@ class Dataframe:
             for row in result:
                 output+=str(index)+"\t"
                 for i in range(len(self.frame_index)):
-                    output+=row[i]+"\t"
+                    output+=str(row[i])+"\t"
                 output+="\n"
                 index+=1
             del result
@@ -163,7 +159,7 @@ class Dataframe:
         if self.frame_kind == FrameKind.SINGLECOL:
             return list(self.frame_data)
         return np.transpose(list(self.frame_data.values()))
-    def remove(self,key,copy=False) -> DataFrame|None:
+    def remove(self,key,copy=False) -> Self|None:
         if self.frame_kind ==FrameKind.SINGLECOL:
             if key not in self. frame_index:
                 raise InvalidFrameKey(key)
@@ -192,6 +188,8 @@ class Dataframe:
         if len(col) != len(self.frame_index):
             raise InvalidFrameCol(len(col),len(self.frame_index))
         self.frame_index = col
+    def columns(self) -> List[str]:
+        return self.frame_index
     def update(self,key=None,value=None,copy=False) -> None:
         if self.frame_kind==FrameKind.SINGLECOL:
             if key not in self.frame_index:
@@ -277,3 +275,4 @@ class Dataframe:
             
         return output
         
+

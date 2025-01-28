@@ -57,6 +57,20 @@ class InvalidFrameCol(Exception):
     def __init__(self,got_size:int,old_size:int):
         super().__init__(red_color(f"\n\n Invalid column replacement, Dataframe have {yellow_color(str(old_size))} {red_color('columns')}, {red_color('But got')} {yellow_color(str(got_size))}"))
 
+class ReadCsvEngineFailed(Exception):
+    def __init__(self,message:str):
+        super().__init__(red_color(f"Failed to parse the csv file (reason) => {message}"))
+
+class WriteCsvEngineFailed(Exception):
+    def __init__(self,message:str):
+        super().__init__(red_color(f"Failed to write the csv file (reason) => {message}"))
+
+
+class InvalidFlashDataframe(Exception):
+    def __init__(self,):
+        super().__init__(red_color(f"Need valid flash data_frame"))
+
+
 def invalid_frame_key_error(col:str ) -> str: 
     return red_color(f"\n\n[Error]: Column [{col}] does not exist in the dataframe")
 
