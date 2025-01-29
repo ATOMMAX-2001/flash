@@ -46,7 +46,7 @@ class InvalidIndexSize(Exception):
 
 class InvalidRowSize(Exception):
     def __init__(self,row_size: List[Any]):
-        super().__init__(red_color(f"\n\n All the row must be of same size. Got {yellow_color(str(row_size))} {yellow_color('row' if len(row_size)==1 else 'rows')}"))
+        super().__init__(red_color(f"\n\n All the row must be of same size. Got {yellow_color(str(row_size))} {yellow_color('row' if row_size==1 else 'rows')}"))
 
 
 class InvalidFrameKey(Exception):
@@ -64,6 +64,15 @@ class ReadCsvEngineFailed(Exception):
 class WriteCsvEngineFailed(Exception):
     def __init__(self,message:str):
         super().__init__(red_color(f"Failed to write the csv file (reason) => {message}"))
+
+
+class ReadXlEngineFailed(Exception):
+    def __init__(self,message:str):
+        super().__init__(red_color(f"Failed to parse the XL file (reason) => {message}"))
+
+class WriteXlEngineFailed(Exception):
+    def __init__(self, message):
+        super().__init__(red_color(f"Failed to write the XL file (reason) => {message}"))
 
 
 class InvalidFlashDataframe(Exception):

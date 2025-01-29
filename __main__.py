@@ -1,13 +1,13 @@
 from src.core.flash import Dataframe
-import src.core.flashio as flash
+from src.core.flashio import read_csv,write_csv,read_excel,write_excel
 import time 
 
 start_time = time.perf_counter()
 
-df = flash.read_csv("./test/sample.csv")
-df.dropna()
+df =read_csv("./../../../deepak_postpaid_line.csv")
 
-flash.write_csv(df,"./test/test.csv")
+print(df)
+
 end_time=time.perf_counter()
 print("Elasped time:",end_time-start_time,"Seconds")
 

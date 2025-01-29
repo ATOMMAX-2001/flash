@@ -2,7 +2,7 @@ import numpy as np
 from  .flash_error import *
 from .frame import *
 from copy import deepcopy
-from typing import Self
+from typing import Self,Callable,Any
 
 
 class Dataframe: 
@@ -206,7 +206,10 @@ class Dataframe:
             return new_df
         else:
             self.frame_data[key]=value
-
+    def apply(self,function,col:np.ndarray):
+        if  not isinstance(col,np.ndarray):
+            raise InvalidFlashDataframe
+        return np.array(list(map(function,col)))
     def __iter__(self) -> Dict[str|int,List[Any]]:
         return iter(self.frame_data.items())
     def __getitem__(self,key) -> List[Any]:
@@ -227,7 +230,7 @@ class Dataframe:
         else:
             if self.frame_data.get(key,None) is None:
                 self.frame_index.append(key)
-            if value ==None:
+            if value is None:
                 value= [None] * len(self.frame_data[next(iter(self.frame_data))])
             else:
                 if len(value) != len(self.frame_data[next(iter(self.frame_data))]):
