@@ -86,7 +86,7 @@ class Dataframe:
         if self.frame_kind == FrameKind.SINGLECOL:
             result = np.append(self.frame_data,df.values())
             new_obj = Dataframe(result)
-            del self,old
+            del result
             return new_obj
         else:
             if len(self.frame_index) != len(df.columns()):
