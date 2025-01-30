@@ -101,6 +101,22 @@ class Dataframe:
             del result,second_frame
             return new_obj
             
+    def distinct(self,col:str|None=None):
+        if self.frame_kind == FrameKind.SINGLECOL:
+            new_obj = Dataframe(data=np.unique(self.frame_data))
+            return new_obj
+        if col is None:
+            distinct_result = np.transpose(np.unique(self.records(),axis=0))
+            result ={}
+            for index,col in enumerate(self.frame_index):
+                result[col] =  distinct_result[index]
+            new_obj = Dataframe(data=result)
+            return new_obj
+        if col not in self.frame_index:
+            raise InvalidFrameKey(col)
+        new_obj = Dataframe(data=np.unique(self.frame_data[col]))
+        return new_obj
+        
 
     def copy(self):
         return deepcopy(self)
