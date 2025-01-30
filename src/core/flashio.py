@@ -86,16 +86,14 @@ def write_excel(df: np.ndarray,filename: str,sheet_name: str):
     if not  isinstance(df,Dataframe):
         raise InvalidFlashDataframe()
     try: 
-        result = df.records()
+        result = df.records().astype(str)
         header = df.columns()
         workbook = xlsxwriter.Workbook(filename)
         worksheet = workbook.add_worksheet(sheet_name)
         worksheet.write_row(0,col=0,data=header)
         for (index,rows) in enumerate(result):
-            worksheet.write_row(index,col=0,data=rows)
+            worksheet.write_row(index+1,col=0,data=rows)
         workbook.close()
-      #   for rows in result:
-      #       worksheet.write_row(rows)
     except Exception as e:
       error =str(e)
       error = error.replace("calamine","flash")

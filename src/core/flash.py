@@ -2,7 +2,7 @@ import numpy as np
 from  .flash_error import *
 from .frame import *
 from copy import deepcopy
-from typing import Self,Callable,Any
+from typing import Self,Any
 
 
 class Dataframe: 
@@ -61,17 +61,95 @@ class Dataframe:
     def keys(self) -> List[str|int]:
         return self.frame_index
 
-    def values(self) -> List[Any]:
+    def values(self) -> np.ndarray|List[Any]:
         if self.frame_kind==FrameKind.SINGLECOL:
-            return list(self.frame_data)
-        return list(self.frame_data.values())
-
+            return self.frame_data
+        result = []
+        for col in self.frame_data.keys():
+            result.append(self.frame_data[col])
+        return result
     def isEmpty(self,col=None) -> bool|InvalidFrameKey:
         if self.frame_kind == FrameKind.SINGLECOL:
             return len(self.frame_data)==0
         if self.frame_data.get(col,None) is None:
             raise InvalidFrameKey(col)
-        return self.frame_data[col].size==0    
+        return self.frame_data[col].size==0
+    def apply(self,function,col:np.ndarray|None=None):
+        if self.frame_kind == FrameKind.SINGLECOL:
+            return np.array(list(map(function,self.frame_data)))
+        if  not isinstance(col,np.ndarray):
+            raise InvalidFlashDataframe
+        return np.array(list(map(function,col)))
+    def merge(self,df:Self):
+        if not isinstance(df,Dataframe):
+            raise InvalidFlashDataframe()
+        if self.frame_kind == FrameKind.SINGLECOL:
+            result = np.append(self.frame_data,df.values())
+            new_obj = Dataframe(result)
+            del self,old
+            return new_obj
+        else:
+            if len(self.frame_index) != len(df.columns()):
+                first_size= len(self.frame_index)
+                second_size = len(df.columns())
+                raise InvalidMergeColumn(first_size,second_size)
+            result = {}
+            second_frame = df.values()
+            for (index,col) in enumerate(self.frame_index):
+                result[col] = np.append(self.frame_data[col],second_frame[index])
+            new_obj = Dataframe(result)
+            del result,second_frame
+            return new_obj
+            
+
+    def copy(self):
+        return deepcopy(self)
+    def filter(self,cond,copy=False):
+        result,new_result=None,[]
+        if self.frame_kind == FrameKind.SINGLECOL:
+            new_result = self.frame_data[~cond]
+            print("DEBUG:",new_result)
+        else:
+            result = np.transpose(list(self.frame_data.values()))
+            new_result= np.transpose(result[~cond])
+        if copy:
+            if self.frame_kind==FrameKind.SINGLECOL:
+                new_obj = Dataframe(data=new_result)
+                del new_result,cond
+                return new_obj
+            else:
+                new_copy= deepcopy(self.frame_data)
+                for index,key in enumerate(new_copy.keys()):
+                    new_copy[key] = new_result[index]
+                new_obj = Dataframe(data=new_copy)
+                del new_result,cond
+                return new_obj
+        else:
+            if self.frame_kind==FrameKind.SINGLECOL:
+                self.frame_data=new_result
+                return None
+            for index,key in enumerate(self.frame_data.keys()):
+                self.frame_data[key]=new_result[index]
+            del new_result
+            return None
+    def where(self,cond) -> List[Any]:
+        if self.frame_kind == FrameKind.SINGLECOL:
+            new_result = np.transpose(self.frame_data[cond])
+            new_obj= Dataframe(new_result)
+            del new_result
+            return new_obj
+        result = np.transpose(list(self.frame_data.values()))
+        try:
+            new_result =np.transpose(result[cond])
+        except Exception as e:
+            raise ValueError("Invalid Condition")
+        new_data={}
+        for index,key in enumerate(self.frame_data.keys()):
+                new_data[key]=new_result[index]
+        new_obj= Dataframe(new_data)
+        del result,new_data,new_result
+        return new_obj
+        
     def dropna(self,copy=False) -> Any:
         result,mask,new_result=None,None,[]
         if self.frame_kind == FrameKind.SINGLECOL:
@@ -129,7 +207,6 @@ class Dataframe:
             index+=1
         del result
         return output
-    
 
     def head(self,row_length=5) -> List[Any]:
         if not isinstance(row_length,int):
@@ -206,10 +283,7 @@ class Dataframe:
             return new_df
         else:
             self.frame_data[key]=value
-    def apply(self,function,col:np.ndarray):
-        if  not isinstance(col,np.ndarray):
-            raise InvalidFlashDataframe
-        return np.array(list(map(function,col)))
+
     def __iter__(self) -> Dict[str|int,List[Any]]:
         return iter(self.frame_data.items())
     def __getitem__(self,key) -> List[Any]:

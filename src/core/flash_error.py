@@ -80,6 +80,13 @@ class InvalidFlashDataframe(Exception):
         super().__init__(red_color(f"Need valid flash data_frame"))
 
 
+class InvalidMergeColumn(Exception):
+    def __init__(self,first_size,second_size):
+        super().__init__(red_color(f"Both the dataframe should have same number of column,GOT: {yellow_color(f'{first_size,second_size}')}"))
+
+
+
+
 def invalid_frame_key_error(col:str ) -> str: 
     return red_color(f"\n\n[Error]: Column [{col}] does not exist in the dataframe")
 
