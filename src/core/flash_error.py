@@ -30,7 +30,7 @@ class InvalidDictDataframeData(Exception):
 class InvalidColData(Exception):
     def __init__(self,got_type: Any) -> None:
         got_type=str(type(got_type)).replace("class '","").replace("'","")
-        super().__init__(red_color(f"\n\Columns should be in {white_color("<List>")} {red_color('type. Got')} [{yellow_color(got_type)}]"))
+        super().__init__(red_color(f"\n\nColumns should be in {white_color("<List>")} {red_color('type. Got')} [{yellow_color(got_type)}]"))
 
 
 class InvalidIndexDataValues(Exception):

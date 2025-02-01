@@ -17,9 +17,13 @@ def parse_multiple_column_data(index: None|str,data: Dict[Any,Any]|np.ndarray) -
     index_pos=0
     row_size=[]
     for value in data.values():
-        if isinstance(value,list) or isinstance(value,np.ndarray):
+        if isinstance(value,list):
             row_size.append(len(value))
             new_data[index[index_pos]]=np.array(value)
+            index_pos+=1
+        elif isinstance(value,np.ndarray):
+            row_size.append(len(value))
+            new_data[index[index_pos]]=value
             index_pos+=1
         else:
             raise InvalidDictDataframeData(value)

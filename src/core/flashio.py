@@ -20,6 +20,7 @@ def read_csv(filename) -> Dataframe:
             result[col] = records.column(col).to_numpy()
         del records
         new_obj = Dataframe(data=result)
+        del result
         return new_obj
 
 def write_csv(df: np.ndarray,filename: str,delimit=",") -> None:
@@ -43,6 +44,7 @@ def excel_read_task(df:List[Any],id:int,storage:Dict[Any,Any]):
          result[header[index]] = rows[index]
    new_obj = Dataframe(result)
    storage[id]=new_obj
+   del new_obj
 
 
 def read_excel(filename,sheet_id=None,is_header=True) -> Dict[int,Dataframe]|Dataframe:
