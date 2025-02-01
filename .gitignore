@@ -3,3 +3,7 @@ __pycache__
 Scripts/*
 Lib
 peacock.code-workspace
+.pypirc
+dist/*
+Flash.egg-info/*
+Flash.egg-info
