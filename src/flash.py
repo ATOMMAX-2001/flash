@@ -20,6 +20,8 @@ class Dataframe:
     })
     # here value should be in list type represent each row for a column
     """ 
+    __version__ = "Flash: V0.1.0"
+    __author__ ="Flash is developed by S.Abilash"
     def __init__(self,data=None,index=None) -> None:
         if data is None:
             raise EmptyInitilization()
@@ -299,10 +301,6 @@ class Dataframe:
             return new_df
         else:
             self.frame_data[key]=value
-    def __version__(self) -> None:
-        print("Flash: V0.1.0")
-    def __author__(self) -> None:
-        print("Flash is developed by S.Abilash")
     def __iter__(self) -> Dict[str|int,List[Any]]:
         return iter(self.frame_data.items())
     def __getitem__(self,key) -> List[Any]:

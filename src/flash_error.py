@@ -19,24 +19,24 @@ class EmptyInitilization(Exception):
 class InvalidDataframeData(Exception):
     def __init__(self, got_type:Any) -> None:
         got_type=str(type(got_type)).replace("class '","").replace("'","")
-        super().__init__(red_color(f"\n\nDataframe should be in {white_color("<List>")} or {white_color("<Dict>")} type.Got [{yellow_color(got_type)}]"))
+        super().__init__(red_color(f"\n\nDataframe should be in {white_color('<List>')} or {white_color('<Dict>')} type.Got [{yellow_color(got_type)}]"))
 
 
 class InvalidDictDataframeData(Exception):
     def __init__(self,got_type:Any) -> None:
         got_type=str(type(got_type)).replace("class '","").replace("'","")
-        super().__init__(red_color(f"\n\nMulti column dataframe value should be in {white_color("<List>")}. Got [{got_type}]"))
+        super().__init__(red_color(f"\n\nMulti column dataframe value should be in {white_color('<List>')}. Got [{got_type}]"))
 
 class InvalidColData(Exception):
     def __init__(self,got_type: Any) -> None:
         got_type=str(type(got_type)).replace("class '","").replace("'","")
-        super().__init__(red_color(f"\n\nColumns should be in {white_color("<List>")} {red_color('type. Got')} [{yellow_color(got_type)}]"))
+        super().__init__(red_color(f"\n\nColumns should be in {white_color('<List>')} {red_color('type. Got')} [{yellow_color(got_type)}]"))
 
 
 class InvalidIndexDataValues(Exception):
     def __init__(self,got_type: Any) -> None:
         got_type=str(type(got_type)).replace("class '","").replace("'","")
-        super().__init__(red_color(f"\n\nIndex content should be in {white_color("<Str>")} type.Got [{got_type}]"))
+        super().__init__(red_color(f"\n\nIndex content should be in {white_color('<Str>')} type.Got [{got_type}]"))
 
 
 class InvalidIndexSize(Exception):
