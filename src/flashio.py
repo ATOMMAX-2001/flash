@@ -38,20 +38,16 @@ def write_csv(df: np.ndarray,filename: str,delimit=",") -> None:
     
 
 def excel_read_task(df:List[Any],id:int,storage:Dict[Any,Any]):
-   print(f"Transforming...[Sheet-{id}]",flush=True)
-   header = df[0]
-   trans_rows=[]
-   for row in range(1,len(df)):
-       trans_rows.append(np.fromiter(df[row],dtype=object))
-   rows = np.transpose(trans_rows)
-   del trans_rows
-   result = {col:None for col in header}
-   for index in range(len(result.keys())):
-         result[header[index]] = rows[index]
-   new_obj = Dataframe(result)
-   storage[id]=new_obj
-   print(f"Completed...[Sheet-{id}]",flush=True)
-
+    print("INFO:",f"Transforming...[Sheet-{id}]",flush=True)
+    header = df[0]
+    trans_rows=[]
+    trans_rows=np.array(df)
+    result = {col:None for col in header}
+    for index in range(len(result.keys())):
+        result[header[index]] = trans_rows[:,index]
+    new_obj = Dataframe(result)
+    storage[id]=new_obj
+    print("INFO:",f"Completed...[Sheet-{id}]",flush=True)
 
 def read_excel(filename,sheet_id=None,is_header=True) -> Dict[int,Dataframe]|Dataframe:
    if sheet_id is not None and not isinstance(sheet_id,int):
@@ -61,15 +57,15 @@ def read_excel(filename,sheet_id=None,is_header=True) -> Dict[int,Dataframe]|Dat
        error ="header should be in type: <Bool>"
        raise ReadXlEngineFailed(error)
    try:
-      print("Parsing...  ",end="\r",flush=True)
+      print("INFO:","Parsing...  ",end="\r",flush=True)
       workbook = CalamineWorkbook.from_path(filename)
       if sheet_id ==None:
          manager = mp.Manager()
          process_storage = manager.dict()
          my_worker = []
-         print("Reading...",end="\r",flush=True)
+         print("INFO:","Reading...",end="\r",flush=True)
          for id in range(len(workbook.sheet_names)):
-            print(f"Reading...[Sheet-{id}]",flush=True)
+            print("INFO:",f"Reading...[Sheet-{id}]",flush=True)
             df = workbook.get_sheet_by_index(id).to_python()
             worker = mp.Process(target=excel_read_task,args=(df,id,process_storage))
             worker.start()

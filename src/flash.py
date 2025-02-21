@@ -3,6 +3,7 @@ from  .flash_error import *
 from .frame import *
 from copy import deepcopy
 from typing import Self,Any
+from prettytable import PrettyTable 
 
 __version__ = "Flash: V0.1.0"
 __author__ ="Flash is developed by S.Abilash"
@@ -55,12 +56,12 @@ class Dataframe:
         return self.frame_data.__sizeof__()
     def dim(self) -> int:
         return 1 if self.frame_kind==FrameKind.SINGLECOL else len(self.frame_index)
-    def size(self) -> Tuple[int,int]:
+    def size(self) -> Dict[int,int]:
         if self.frame_kind == FrameKind.SINGLECOL:
-            return {"row":1,"col":len(self.frame_data)}
+            return {"col":1,"rows":len(self.frame_data)}
         else:
             return{
-                "row": int(self.frame_size),
+                "rows": int(self.frame_size),
                 "col": len(self.frame_index)
             }
     def keys(self) -> List[str|int]:
@@ -340,45 +341,29 @@ class Dataframe:
                     raise InvalidRowSize(len(value))
         self.frame_data[key]=value
     def __str__(self) -> str:
-        output="\n"
         if self.frame_kind==FrameKind.SINGLECOL:
-            output+="[Index]\t [Values]\n"
-            for index,elem in enumerate(self.frame_data[:10]):
-                output+=f"{self.frame_index[index]}\t {str(elem)}\n"
-            if len(self.frame_data)>10:
-                output+="----\t -------\n"
-                output+=f"{len(self.frame_data)-10} more records\n"
-                output+="----\t -------\n"
+            output_tables = PrettyTable(["Index","Values"])
+            get_data= self.frame_data
+            for row in enumerate(get_data[:10]):
+                output_tables.add_row(row)
+            trail_output="\n"
+            if self.size()["rows"]>10:
+                trail_output+="-----------\n"
+                trail_output+=f"and {len(get_data)-10} more records\n"
+                trail_output+="-----------\n"
         else:
-            col = "\t".join(list(map(lambda x: f"[{x.strip()}]",self.frame_index)))
-            output+=f"[Index]\t{col}\n"
-            index=0
-            result =[]
-            overall_value_result=[]
-            for i in list(self.frame_data.values()):
-                overall_value_result.append(i)
-            row =[]
-            while index < len(overall_value_result[0]):
-                if index>10:
-                    break
-                for i in overall_value_result:
-                    row.append(str(i[index]))
-                result.append(row)
-                row=[]
-                index+=1
-            del row,col
-            index=0
-            for row in result:
-                output+=str(index)+"\t"
-                for col in row:
-                    output+=f"{str(col)}\t"
-                output+="\n"
-                index+=1
-            if len(overall_value_result[0])>10:
-                output+="----\t -------\n"
-                output+=f"{len(overall_value_result[0])-11} more records\n"
-                output+="----\t -------\n"
+            output_tables = PrettyTable(list(self.frame_index))
+            get_data= self.records()
+            for row in get_data[1:10]:
+                output_tables.add_row(row)
+            trail_output="\n"
+            if self.size()["rows"]>10:
+                trail_output+="-----------\n"
+                trail_output+=f"and {len(get_data)-10} more records\n"
+                trail_output+="-----------\n"
+            del get_data
             
-        return output
+            
+        return str(output_tables)+trail_output
         
 
