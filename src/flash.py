@@ -4,8 +4,12 @@ from .frame import *
 from copy import deepcopy
 from typing import Self,Any
 
+__version__ = "Flash: V0.1.0"
+__author__ ="Flash is developed by S.Abilash"
+
 
 class Dataframe: 
+
     """
     if data object type is 
     1 -> List [Single column]
@@ -20,8 +24,6 @@ class Dataframe:
     })
     # here value should be in list type represent each row for a column
     """ 
-    __version__ = "Flash: V0.1.0"
-    __author__ ="Flash is developed by S.Abilash"
     def __init__(self,data=None,index=None) -> None:
         if data is None:
             raise EmptyInitilization()
@@ -48,6 +50,7 @@ class Dataframe:
         else:
             data_type = type(data)
             raise InvalidDataframeData(data_type)
+        self.Str = StringUtils(self)
     def memspace(self) -> int:
         return self.frame_data.__sizeof__()
     def dim(self) -> int:
@@ -57,8 +60,8 @@ class Dataframe:
             return {"row":1,"col":len(self.frame_data)}
         else:
             return{
-                "row": len(self.frame_index),
-                "col": self.frame_size
+                "row": int(self.frame_size),
+                "col": len(self.frame_index)
             }
     def keys(self) -> List[str|int]:
         return self.frame_index
@@ -102,7 +105,6 @@ class Dataframe:
             new_obj = Dataframe(result)
             del result,second_frame
             return new_obj
-            
     def distinct(self,col:str|None=None):
         if self.frame_kind == FrameKind.SINGLECOL:
             new_obj = Dataframe(data=np.unique(self.frame_data))
@@ -119,7 +121,6 @@ class Dataframe:
         new_obj = Dataframe(data=np.unique(self.frame_data[col]))
         return new_obj
         
-
     def copy(self):
         return deepcopy(self)
     def filter(self,cond,copy=False):
@@ -303,7 +304,8 @@ class Dataframe:
             self.frame_data[key]=value
     def __iter__(self) -> Dict[str|int,List[Any]]:
         return iter(self.frame_data.items())
-    def __getitem__(self,key) -> List[Any]:
+    
+    def as_col(self,key) ->List[Any]|None:
         if self.frame_kind == FrameKind.SINGLECOL:
             if key not in self.frame_index:
                 print(invalid_frame_key_error(key))
@@ -313,6 +315,16 @@ class Dataframe:
                 print(invalid_frame_key_error(key))
                 return
         return self.frame_data[key]
+    def __getitem__(self,key) -> Self:
+        if self.frame_kind == FrameKind.SINGLECOL:
+            if key not in self.frame_index:
+                print(invalid_frame_key_error(key))
+                return    
+        else:
+            if self.frame_data.get(key,None) is None:
+                print(invalid_frame_key_error(key))
+                return
+        return Dataframe(self.frame_data[key])
     def __setitem__(self, key,value) -> Dict[str|int,List[Any]]:
         if self.frame_kind == FrameKind.SINGLECOL:
             if key not in self.frame_index:

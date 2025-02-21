@@ -1,11 +1,13 @@
 import pyarrow.csv as csv_engine
 from python_calamine import CalamineWorkbook
 from .flash import Dataframe
-from  .flash_error import *
+from typing import List,Any
+from  .flash_error import ReadCsvEngineFailed,InvalidFlashDataframe,WriteCsvEngineFailed,ReadXlEngineFailed
 from typing import Dict
 import numpy as np
 import xlsxwriter
 import multiprocessing as mp
+
 
 def read_csv(filename) -> Dataframe:
         try:
@@ -32,7 +34,6 @@ def write_csv(df: np.ndarray,filename: str,delimit=",") -> None:
         np.savetxt(filename,result,delimiter=delimit,fmt="%s",header=header,comments="")
      except Exception as e:
         error =str(e)
-        error = error.replace("pyarrow","flash")
         raise WriteCsvEngineFailed(error)
     
 
@@ -43,12 +44,12 @@ def excel_read_task(df:List[Any],id:int,storage:Dict[Any,Any]):
    for row in range(1,len(df)):
        trans_rows.append(np.fromiter(df[row],dtype=object))
    rows = np.transpose(trans_rows)
+   del trans_rows
    result = {col:None for col in header}
    for index in range(len(result.keys())):
          result[header[index]] = rows[index]
    new_obj = Dataframe(result)
    storage[id]=new_obj
-   del new_obj
    print(f"Completed...[Sheet-{id}]",flush=True)
 
 

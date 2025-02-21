@@ -76,7 +76,7 @@ class WriteXlEngineFailed(Exception):
 
 
 class InvalidFlashDataframe(Exception):
-    def __init__(self,):
+    def __init__(self):
         super().__init__(red_color(f"Need valid flash data_frame"))
 
 
@@ -85,6 +85,9 @@ class InvalidMergeColumn(Exception):
         super().__init__(red_color(f"Both the dataframe should have same number of column,GOT: {yellow_color(f'{first_size,second_size}')}"))
 
 
+class InvalidStringFrames(Exception):
+    def __init__(self):
+        super().__init__(red_color(f"Need Single-Frame data, But got Multi-Frame data"))
 
 
 def invalid_frame_key_error(col:str ) -> str: 
@@ -96,3 +99,8 @@ def passing_index_in_series():
 
 def invalid_record_size(size:int) -> str:
     return yellow_color("\n\n[Error]: Record size should be in type:<Int>")
+
+
+def invalid_string_arugments(chunk:any) -> str:
+    got_type=str(type(chunk)).replace("class '","").replace("'","")
+    return yellow_color(f"\n\n[Error]: Arguments type should be of non-empty type<Str> . GOT:{got_type}")
